@@ -5,18 +5,7 @@
 #include <unistd.h>
 #include "jsmalloc.h"
 
-/* Moved to jsmalloc.h:
-struct block_meta {
-  size_t size;
-  struct block_meta *next;
-  int jsfree;
-  int magic; // For debugging only.
-};
-
-#define META_SIZE sizeof(struct block_meta)
-
-void *global_base = NULL;
-*/
+void* global_base = NULL;
 
 struct block_meta *find_free_block(struct block_meta **last, size_t size) {
   struct block_meta *current = global_base;
@@ -129,8 +118,11 @@ void *jscalloc(size_t nelem, size_t elsize) {
 void traverse_blocks() {
   struct block_meta *current = global_base;
   int i = 0;
+  printf("{ global_base: %p\n", global_base);
   while (current) {
-    printf("%d: [%p] free = %d, magic = %x\n", i, &current, current->free, current->magic);
+    printf("\t%d: [%p|%p] free = %d, size = %li, magic = %x\n", i, current, current+1, current->free, current-> size, current->magic);
     current = current->next;
+    i++;
   }
+  puts("}\n");
 }
