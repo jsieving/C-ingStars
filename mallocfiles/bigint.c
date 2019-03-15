@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "jsmalloc.h"
+#include "my_malloc.h"
 
 /* reverse_string: Returns a new string with the characters reversed.
 
