@@ -17,15 +17,19 @@ int main() {
     traverse_blocks();
   }
 
-  puts("----------------------------------------\n----------------------------------------");
+  puts("---------------------------------------\n---------------------------------------");
 
   struct block_meta* current = global_base;
+  while (current->next->next) {
+    current = current->next;
+  }
+
   while (current) {
     printf("\nFreeing block @ %p|%p.\n", current, current+1);
     my_free(current+1);
     puts("Running traverse_blocks...");
     traverse_blocks();
-    current = current->next;
+    current = current->prev;
   }
 
   space = 0;

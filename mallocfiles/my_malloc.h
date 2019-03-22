@@ -4,12 +4,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-struct block_meta {
+typedef struct block_meta {
   size_t size;
+  struct block_meta *prev;
   struct block_meta *next;
   int free;
   int magic; // For debugging only. TODO: remove this in non-debug mode.
-};
+} Block;
 
 #define META_SIZE sizeof(struct block_meta)
 

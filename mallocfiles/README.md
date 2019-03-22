@@ -5,6 +5,7 @@
 my_malloc is our (very, very simple) implementation of malloc. It's a work in progress, and it's based on [this tutorial](https://danluu.com/malloc-tutorial/) by Dan Luu.
 
 `make` or `make test1` will compile my_malloc and test1 which uses my_malloc.
+`make test2` or `make test3` will compile my_malloc and test2 or test3, which are minor variations on test1. 
 
 `make malloc_test` will compile my_malloc and malloc_test which evaluates my_malloc.
 

@@ -13,8 +13,8 @@ void* global_base = NULL; // head of linked list of memory blocks
 
   returns: my_free block
 */
-struct block_meta *find_free_block(struct block_meta **last, size_t size) {
-  struct block_meta *current = global_base;
+Block *find_free_block(Block **last, size_t size) {
+  Block *current = global_base;
   while (current && !(current->free && current->size >= size)) {
     *last = current;
     current = current->next;
@@ -28,8 +28,8 @@ struct block_meta *find_free_block(struct block_meta **last, size_t size) {
 
   returns: newly allocated block
 */
-struct block_meta *request_space(struct block_meta* last, size_t size) {
-  struct block_meta *block;
+Block *request_space(Block* last, size_t size) {
+  Block *block;
   block = sbrk(0); // points to current top of heap
   void *request = sbrk(size + META_SIZE);
   assert((void*)block == request); // TODO: Not thread safe.
@@ -40,6 +40,7 @@ struct block_meta *request_space(struct block_meta* last, size_t size) {
   if (last) { // NULL on first request, so add to linked list.
     last->next = block;
   }
+  block->prev = last;
   block->size = size;
   block->next = NULL;
   block->free = 0;
@@ -54,7 +55,7 @@ struct block_meta *request_space(struct block_meta* last, size_t size) {
   returns: pointer to allocated space
 */
 void *my_malloc(size_t size) {
-  struct block_meta *block;
+  Block *block;
   // TODO: align size
 
   if (size <= 0) {
@@ -68,7 +69,7 @@ void *my_malloc(size_t size) {
     }
     global_base = block;
   } else {
-    struct block_meta *last = global_base;
+    Block *last = global_base;
     block = find_free_block(&last, size);
     if (!block) { // Failed to find free block.
       block = request_space(last, size);
@@ -76,19 +77,30 @@ void *my_malloc(size_t size) {
         return NULL;
       }
     } else {      // Found free block
-      // TODO: consider splitting block here.
+      if (block->size > size + META_SIZE) { // If block is larger than necessary
+        Block *leftover;
+        long int first_pos = (long int) block;
+        leftover = (Block *) (first_pos + size + META_SIZE);
+        leftover->size = block->size - size - META_SIZE;
+        leftover->next = block->next;
+        leftover->prev = block;
+        leftover->free = 1;
+        leftover->magic = 0x22222222;
+        block->next = leftover;
+        block->size = size;
+      }
       block->free = 0;
       block->magic = 0x77777777;
     }
   }
 
-  return(block+1);
+  return(block + 1);
   // block+1 because want to point to the region after block_meta
   // and +1 increments by one sizeof(struct(block_meta))
 }
 
-struct block_meta *get_block_ptr(void *ptr) {
-  return (struct block_meta*)ptr - 1;
+Block *get_block_ptr(void *ptr) {
+  return (Block*)ptr - 1;
 }
 
 // my_free: my_frees block at given pointer
@@ -96,13 +108,28 @@ void my_free(void *ptr) {
   if (!ptr) {
     return;
   }
-
-  // TODO: consider merging blocks once splitting blocks is implemented.
-  struct block_meta* block_ptr = get_block_ptr(ptr);
+  Block* block_ptr = get_block_ptr(ptr);
   assert(block_ptr->magic == 0x77777777 || block_ptr->magic == 0x12345678);
   assert(block_ptr->free == 0);
+  // If this is the last block, just cut it off
+  if (block_ptr->next == NULL && block_ptr->prev) {
+    block_ptr->prev->next = NULL;
+    return;
+  }
+  // If the next block is free, absorb its space
+  if (block_ptr->next && block_ptr->next->free == 1) {
+    block_ptr->size += META_SIZE + block_ptr->next->size;
+    block_ptr->next = block_ptr->next->next;
+    if (block_ptr->next) {block_ptr->next->prev = block_ptr->prev;}
+  }
+  // If the previous block is free, grow it and tell it to jump over this one
+  if (block_ptr->prev && block_ptr->prev->free == 1) {
+    block_ptr->prev->size += META_SIZE + block_ptr->size;
+    block_ptr->prev->next = block_ptr->next;
+    if (block_ptr->next) {block_ptr->next->prev = block_ptr->prev;}
+  }
+  // Set the free flag to 1 (doesn't do much if prev is free or gets cut off)
   block_ptr->free = 1;
-  block_ptr->magic = 0x55555555;
 }
 
 void *my_realloc(void *ptr, size_t size) {
@@ -111,7 +138,7 @@ void *my_realloc(void *ptr, size_t size) {
     return my_malloc(size);
   }
 
-  struct block_meta* block_ptr = get_block_ptr(ptr);
+  Block* block_ptr = get_block_ptr(ptr);
   if (block_ptr->size >= size) {
     // We have enough space. Could free some once we implement split.
     return ptr;
@@ -137,11 +164,14 @@ void *my_calloc(size_t nelem, size_t elsize) {
 }
 
 void traverse_blocks() {
-  struct block_meta *current = global_base;
+  Block *current = global_base;
   int i = 0;
   printf("{ global_base: %p\n", global_base);
   while (current) {
-    printf("\t%d: [%p|%p] free = %d, size = %li, magic = %x\n", i, current, current+1, current->free, current-> size, current->magic);
+    printf("\t%d: [%p|%p] free = %d, size = %li, magic = %x\n", i, current, current+1, current->free, current->size, current->magic);
+    if (current->next != NULL) {
+      printf("|%li| %li |\n", (long int) current->next - (long int) current, (long int) current->next - (long int) current - 32);
+    }
     current = current->next;
     i++;
   }
