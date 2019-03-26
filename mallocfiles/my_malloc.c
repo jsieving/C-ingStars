@@ -48,8 +48,31 @@ Block *request_space(Block* last, size_t size) {
   block->size = size;
   block->next = NULL;
   block->free = 0;
-  block->magic = 0x12345678;
+  block->magic = 0x12341234;
   return block;
+}
+
+/* handle_extra_space: called when a block may have more space than necessary.
+  If there is enough extra space in the block to create another block meta, one is created and freed.
+
+  block_ptr: the block which may need size adjustment
+  need_size: number of bytes that the block needs to retain, expected to be divisible by 8
+*/
+void handle_extra_space(Block* block_ptr, size_t need_size) {
+  if (block_ptr->size < need_size + META_SIZE) { // quit if there is not enough space to create a new Block
+    return;
+  }
+  Block *leftover;
+  long int first_pos = (long int) block_ptr;
+  leftover = (Block *) (first_pos + META_SIZE + need_size);
+  leftover->size = block_ptr->size - need_size - META_SIZE;
+  leftover->next = block_ptr->next;
+  leftover->prev = block_ptr;
+  leftover->free = 0;
+  leftover->magic = 0x23231234;
+  block_ptr->next = leftover;
+  block_ptr->size = need_size;
+  my_free(leftover+1); // calling free() makes sure the extra free space is combined with other free space
 }
 
 /* my_malloc: allocates space on heap using sbrk
@@ -60,10 +83,13 @@ Block *request_space(Block* last, size_t size) {
 */
 void *my_malloc(size_t size) {
   Block *block;
-  // TODO: align size
 
   if (size <= 0) {
     return NULL;
+  }
+
+  if (size & 0b111) {
+    size = ((size >> 3) << 3) + 8; // Round size up to multiple of 8
   }
 
   if (!global_base) { // on first call, try to create global base
@@ -83,20 +109,10 @@ void *my_malloc(size_t size) {
         return NULL;
       }
     } else {      // Found free block
-      if (block->size > size + META_SIZE) { // If block is larger than necessary
-        Block *leftover;
-        long int first_pos = (long int) block;
-        leftover = (Block *) (first_pos + size + META_SIZE);
-        leftover->size = block->size - size - META_SIZE;
-        leftover->next = block->next;
-        leftover->prev = block;
-        leftover->free = 1;
-        leftover->magic = 0x22222222;
-        block->next = leftover;
-        block->size = size;
-      }
       block->free = 0;
-      block->magic = 0x77777777;
+      block->magic = 0x77771234;
+      puts("Calling leftover\n");
+      handle_extra_space(block, size);
     }
   }
 
@@ -109,19 +125,14 @@ Block *get_block_ptr(void *ptr) {
   return (Block*)ptr - 1;
 }
 
-// my_free: my_frees block at given pointer
+// my_free: frees block at given pointer
 void my_free(void *ptr) {
   if (!ptr) {
     return;
   }
   Block* block_ptr = get_block_ptr(ptr);
-  assert(block_ptr->magic == 0x77777777 || block_ptr->magic == 0x12345678);
+  if ((block_ptr->magic & 0xFFFF) != 0x1234) printf("Error in my_free: %x\n", (block_ptr->magic)>>16);
   assert(block_ptr->free == 0);
-  // If this is the last block, just cut it off
-  if (block_ptr->next == NULL && block_ptr->prev) {
-    block_ptr->prev->next = NULL;
-    return;
-  }
   // If the next block is free, absorb its space
   if (block_ptr->next && block_ptr->next->free == 1) {
     block_ptr->size += META_SIZE + block_ptr->next->size;
@@ -134,7 +145,7 @@ void my_free(void *ptr) {
     block_ptr->prev->next = block_ptr->next;
     if (block_ptr->next) {block_ptr->next->prev = block_ptr->prev;}
   }
-  // Set the free flag to 1 (doesn't do much if prev is free or gets cut off)
+  // Set the free flag to 1 (doesn't do much if prev is free)
   block_ptr->free = 1;
 }
 
@@ -144,10 +155,39 @@ void *my_realloc(void *ptr, size_t size) {
     return my_malloc(size);
   }
 
+  if (size == 0) {
+    my_free(ptr);
+  }
+
+  if (size & 0b111) {
+    size = ((size >> 3) << 3) + 8; // Round size up to multiple of 8
+  }
+
   Block* block_ptr = get_block_ptr(ptr);
   if (block_ptr->size >= size) {
-    // We have enough space. Could free some once we implement split.
+    // We have enough space.
+    handle_extra_space(block_ptr, size); // if there is sufficient extra space, make it into a free block
     return ptr;
+  }
+
+  if (block_ptr->next && block_ptr->next->free) { // Get space in next block if it exists and is free
+    Block* next_ptr = block_ptr->next;
+    if (next_ptr->size + META_SIZE >= size) {
+      block_ptr->size += next_ptr->size + META_SIZE;
+      block_ptr->next = next_ptr->next;
+      next_ptr->next->prev = block_ptr;
+      return block_ptr;
+    }
+  }
+
+  if (block_ptr->next == NULL) { // expand the block if it is on the end
+    void *request = sbrk(size - block_ptr->size);
+    if (request == (void*) -1) {
+      return NULL; // sbrk failed. TODO: set errno on failure.
+    } else {
+      block_ptr->size = size;
+      return block_ptr;
+    }
   }
 
   // Need to really realloc. Malloc new space and free old space.
@@ -177,7 +217,7 @@ void traverse_blocks() {
   int i = 0;
   printf("{ global_base: %p\n", global_base);
   while (current) {
-    printf("\t%d: [%p|%p] free = %d, size = %li, magic = %x\n", i, current, current+1, current->free, current->size, current->magic);
+    printf("\t%d: [%p|%p] free = %d, size = %li, magic = %x\n", i, current, current+1, current->free, current->size, (current->magic)>>16);
     if (current->next != NULL) {
       printf("|%li| %li |\n", (long int) current->next - (long int) current, (long int) current->next - (long int) current - 32);
     }
