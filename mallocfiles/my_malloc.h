@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
 
 typedef struct block_meta {
   size_t size;

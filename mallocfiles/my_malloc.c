@@ -3,10 +3,12 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "my_malloc.h"
 
 void* global_base = NULL; // head of linked list of memory blocks
 
+pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* find_free_block: iterates through linked list looking
   for my_free block of correct size
@@ -14,7 +16,9 @@ void* global_base = NULL; // head of linked list of memory blocks
   returns: my_free block
 */
 Block *find_free_block(Block **last, size_t size) {
+  pthread_mutex_lock(&global_mutex);
   Block *current = global_base;
+  pthread_mutex_unlock(&global_mutex);
   while (current && !(current->free && current->size >= size)) {
     *last = current;
     current = current->next;
@@ -67,7 +71,9 @@ void *my_malloc(size_t size) {
     if (!block) {  // if request space failed
       return NULL;
     }
+    pthread_mutex_lock(&global_mutex);
     global_base = block;
+    pthread_mutex_unlock(&global_mutex);
   } else {
     Block *last = global_base;
     block = find_free_block(&last, size);
@@ -164,7 +170,10 @@ void *my_calloc(size_t nelem, size_t elsize) {
 }
 
 void traverse_blocks() {
+  pthread_mutex_lock(&global_mutex);
   Block *current = global_base;
+  pthread_mutex_unlock(&global_mutex);
+
   int i = 0;
   printf("{ global_base: %p\n", global_base);
   while (current) {
