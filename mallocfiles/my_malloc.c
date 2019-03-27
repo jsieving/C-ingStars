@@ -36,8 +36,9 @@ Block *request_space(Block* last, size_t size) {
   Block *block;
   block = sbrk(0); // points to current top of heap
   void *request = sbrk(size + META_SIZE);
-  assert((void*)block == request); // TODO: Not thread safe.
+  if ((void*)block != request) puts("Error in request_space.\n");
   if (request == (void*) -1) {
+    puts("Error in request_space: sbrk failed.\n");
     return NULL; // sbrk failed.
   }
 
@@ -97,6 +98,7 @@ void *my_malloc(size_t size) {
   if (!global_base) { // on first call, try to create global base
     block = request_space(NULL, size);
     if (!block) {  // if request space failed
+      puts("Error in my_malloc: request_space failed while creating global base.\n");
       return NULL;
     }
     pthread_mutex_lock(&global_mutex);
@@ -108,6 +110,7 @@ void *my_malloc(size_t size) {
     if (!block) { // Failed to find free block.
       block = request_space(last, size);
       if (!block) {
+        puts("Error in my_malloc: request_space failed while adding new block.\n");
         return NULL;
       }
     } else {      // Found free block
@@ -180,7 +183,8 @@ void *my_realloc(void *ptr, size_t size) {
   if (block_ptr->next == NULL) { // expand the block if it is on the end
     void *request = sbrk(size - block_ptr->size);
     if (request == (void*) -1) {
-      return NULL; // sbrk failed. TODO: set errno on failure.
+      puts("Error in my_realloc: sbrk failed while expanding block at top of heap.\n");
+      return NULL; // sbrk failed.
     } else {
       block_ptr->size = size;
       return block_ptr+1;
@@ -192,7 +196,8 @@ void *my_realloc(void *ptr, size_t size) {
   void *new_ptr;
   new_ptr = my_malloc(size);
   if (!new_ptr) {
-    return NULL; // TODO: set errno on failure.
+    puts("Error in my_realloc: my_malloc failed.\n");
+    return NULL;
   }
   memcpy(new_ptr, ptr, block_ptr->size);
   my_free(ptr);
@@ -200,7 +205,7 @@ void *my_realloc(void *ptr, size_t size) {
 }
 
 void *my_calloc(size_t nelem, size_t elsize) {
-  size_t size = nelem * elsize; // TODO: check for overflow.
+  size_t size = nelem * elsize;
 
   if (size & 0b111) {
     size = ((size >> 3) << 3) + 8; // Round size up to multiple of 8
