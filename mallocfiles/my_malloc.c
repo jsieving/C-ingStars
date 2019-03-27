@@ -131,6 +131,7 @@ Block *get_block_ptr(void *ptr) {
 // my_free: frees block at given pointer
 void my_free(void *ptr) {
   if (!ptr) {
+    puts("Error in my_free: null pointer freed.\n");
     return;
   }
   Block* block_ptr = get_block_ptr(ptr);
