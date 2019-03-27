@@ -10,7 +10,6 @@ typedef struct block_meta {
   struct block_meta *prev;
   struct block_meta *next;
   int free;
-  int magic; // For debugging only. TODO: remove this in non-debug mode.
 } Block;
 
 #define META_SIZE sizeof(struct block_meta)

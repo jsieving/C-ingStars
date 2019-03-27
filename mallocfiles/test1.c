@@ -6,7 +6,6 @@ int main() {
   int sz = 0;
   int space = 0;
   void* p;
-  printf("sizeof(block_meta) = %li\n", sizeof(struct block_meta));
 
   while (space < 200) {
     sz = 32 + (rand() % 61);
@@ -40,5 +39,5 @@ int main() {
     puts("Running traverse_blocks...");
     traverse_blocks();
   }
-  return 1;
+  return 0;
 }

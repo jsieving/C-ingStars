@@ -48,7 +48,6 @@ Block *request_space(Block* last, size_t size) {
   block->size = size;
   block->next = NULL;
   block->free = 0;
-  block->magic = 0x12341234;
   return block;
 }
 
@@ -59,7 +58,8 @@ Block *request_space(Block* last, size_t size) {
   need_size: number of bytes that the block needs to retain, expected to be divisible by 8
 */
 void handle_extra_space(Block* block_ptr, size_t need_size) {
-  if (block_ptr->size < need_size + META_SIZE) { // quit if there is not enough space to create a new Block
+  // quit if there is not enough space to create a new Block
+  if (block_ptr->size < need_size + META_SIZE) {
     return;
   }
   Block *leftover;
@@ -68,11 +68,13 @@ void handle_extra_space(Block* block_ptr, size_t need_size) {
   leftover->size = block_ptr->size - need_size - META_SIZE;
   leftover->next = block_ptr->next;
   leftover->prev = block_ptr;
-  leftover->free = 0;
-  leftover->magic = 0x23231234;
+  leftover->free = 0; // free() expects this to be 0
+  if (block_ptr->next) block_ptr->next->prev = leftover;
   block_ptr->next = leftover;
   block_ptr->size = need_size;
-  my_free(leftover+1); // calling free() makes sure the extra free space is combined with other free space
+  my_free(leftover+1); // calling free() makes sure the extra free space
+                       // is combined with other free space. +1 is because
+                       // it takes a pointer to the data, not metadata.
 }
 
 /* my_malloc: allocates space on heap using sbrk
@@ -110,8 +112,6 @@ void *my_malloc(size_t size) {
       }
     } else {      // Found free block
       block->free = 0;
-      block->magic = 0x77771234;
-      puts("Calling leftover\n");
       handle_extra_space(block, size);
     }
   }
@@ -131,8 +131,7 @@ void my_free(void *ptr) {
     return;
   }
   Block* block_ptr = get_block_ptr(ptr);
-  if ((block_ptr->magic & 0xFFFF) != 0x1234) printf("Error in my_free: %x\n", (block_ptr->magic)>>16);
-  assert(block_ptr->free == 0);
+  if (block_ptr->free != 0) puts("Error in my_free.\n");
   // If the next block is free, absorb its space
   if (block_ptr->next && block_ptr->next->free == 1) {
     block_ptr->size += META_SIZE + block_ptr->next->size;
@@ -155,28 +154,26 @@ void *my_realloc(void *ptr, size_t size) {
     return my_malloc(size);
   }
 
-  if (size == 0) {
-    my_free(ptr);
-  }
-
   if (size & 0b111) {
     size = ((size >> 3) << 3) + 8; // Round size up to multiple of 8
   }
 
   Block* block_ptr = get_block_ptr(ptr);
+
   if (block_ptr->size >= size) {
     // We have enough space.
-    handle_extra_space(block_ptr, size); // if there is sufficient extra space, make it into a free block
+    handle_extra_space(block_ptr, size); // if the block has sufficient excess space, make it into a free block
     return ptr;
   }
 
-  if (block_ptr->next && block_ptr->next->free) { // Get space in next block if it exists and is free
+  if (block_ptr->next && block_ptr->next->free) { // Look for space in next block if it exists and is free
     Block* next_ptr = block_ptr->next;
-    if (next_ptr->size + META_SIZE >= size) {
-      block_ptr->size += next_ptr->size + META_SIZE;
-      block_ptr->next = next_ptr->next;
-      next_ptr->next->prev = block_ptr;
-      return block_ptr;
+    if (next_ptr->size + META_SIZE >= size - block_ptr->size) { // If the next block takes up enough space to grow this block
+      block_ptr->size += META_SIZE + next_ptr->size; // Take its home
+      block_ptr->next = next_ptr->next; // Take its children
+      next_ptr->next->prev = block_ptr; // Convince its children that you are their mother
+      handle_extra_space(block_ptr, size); // If absorbing that space yields more than necessary, split it
+      return block_ptr+1;
     }
   }
 
@@ -186,7 +183,7 @@ void *my_realloc(void *ptr, size_t size) {
       return NULL; // sbrk failed. TODO: set errno on failure.
     } else {
       block_ptr->size = size;
-      return block_ptr;
+      return block_ptr+1;
     }
   }
 
@@ -204,6 +201,11 @@ void *my_realloc(void *ptr, size_t size) {
 
 void *my_calloc(size_t nelem, size_t elsize) {
   size_t size = nelem * elsize; // TODO: check for overflow.
+
+  if (size & 0b111) {
+    size = ((size >> 3) << 3) + 8; // Round size up to multiple of 8
+  }
+
   void *ptr = my_malloc(size);
   memset(ptr, 0, size);
   return ptr;
@@ -217,7 +219,7 @@ void traverse_blocks() {
   int i = 0;
   printf("{ global_base: %p\n", global_base);
   while (current) {
-    printf("\t%d: [%p|%p] free = %d, size = %li, magic = %x\n", i, current, current+1, current->free, current->size, (current->magic)>>16);
+    printf("\t%d: [%p|%p] free = %d, size = %li\n", i, current, current+1, current->free, current->size);
     if (current->next != NULL) {
       printf("|%li| %li |\n", (long int) current->next - (long int) current, (long int) current->next - (long int) current - 32);
     }
