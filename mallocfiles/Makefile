@@ -13,5 +13,5 @@ malloc_test: malloc_test.c my_malloc.c my_malloc.h
 my_malloc: my_malloc.c my_malloc.h
 	gcc -O0 -g -W -Wall -Wextra -shared -fPIC my_malloc.c my_malloc.h -o my_malloc.so
 clean:
-	rm -f *.o *.so bigint test1 test2 test3 malloc_test
+	rm -f *.o *.so bigint test1 test2 test3 test4 malloc_test
 	ls

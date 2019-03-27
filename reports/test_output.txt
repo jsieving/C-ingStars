@@ -1,0 +1,144 @@
+New block @ 0x228d020 of 36 bytes.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+}
+
+
+New block @ 0x22af020 of 72 bytes.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 72
+}
+
+
+New block @ 0x22af088 of 50 bytes.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 72
+|104| 72 |
+	2: [0x22af068|0x22af088] free = 0, size = 56
+}
+
+
+New block @ 0x22af0e0 of 25 bytes.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 72
+|104| 72 |
+	2: [0x22af068|0x22af088] free = 0, size = 56
+|88| 56 |
+	3: [0x22af0c0|0x22af0e0] free = 0, size = 32
+}
+
+
+Realloc'd r block @ 0x22af120 to size 75.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 72
+|104| 72 |
+	2: [0x22af068|0x22af088] free = 1, size = 56
+|88| 56 |
+	3: [0x22af0c0|0x22af0e0] free = 0, size = 32
+|64| 32 |
+	4: [0x22af100|0x22af120] free = 0, size = 80
+}
+
+
+Realloc'd q block @ 0x22af020 to size 110.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 112
+|144| 112 |
+	2: [0x22af090|0x22af0b0] free = 1, size = 16
+|48| 16 |
+	3: [0x22af0c0|0x22af0e0] free = 0, size = 32
+|64| 32 |
+	4: [0x22af100|0x22af120] free = 0, size = 80
+}
+
+
+Calloc'd block @ 0x22af190 with 20 * 4 bytes.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 0, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 112
+|144| 112 |
+	2: [0x22af090|0x22af0b0] free = 1, size = 16
+|48| 16 |
+	3: [0x22af0c0|0x22af0e0] free = 0, size = 32
+|64| 32 |
+	4: [0x22af100|0x22af120] free = 0, size = 80
+|112| 80 |
+	5: [0x22af170|0x22af190] free = 0, size = 80
+}
+
+
+Freeing block @ 0x228d020.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 1, size = 40
+|139264| 139232 |
+	1: [0x22af000|0x22af020] free = 0, size = 112
+|144| 112 |
+	2: [0x22af090|0x22af0b0] free = 1, size = 16
+|48| 16 |
+	3: [0x22af0c0|0x22af0e0] free = 0, size = 32
+|64| 32 |
+	4: [0x22af100|0x22af120] free = 0, size = 80
+|112| 80 |
+	5: [0x22af170|0x22af190] free = 0, size = 80
+}
+
+
+Freeing block @ 0x22af020.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 1, size = 232
+|139456| 139424 |
+	1: [0x22af0c0|0x22af0e0] free = 0, size = 32
+|64| 32 |
+	2: [0x22af100|0x22af120] free = 0, size = 80
+|112| 80 |
+	3: [0x22af170|0x22af190] free = 0, size = 80
+}
+
+
+Freeing block @ 0x22af120.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 1, size = 232
+|139456| 139424 |
+	1: [0x22af0c0|0x22af0e0] free = 0, size = 32
+|64| 32 |
+	2: [0x22af100|0x22af120] free = 1, size = 80
+|112| 80 |
+	3: [0x22af170|0x22af190] free = 0, size = 80
+}
+
+
+Freeing block @ 0x22af0e0.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 1, size = 408
+|139632| 139600 |
+	1: [0x22af170|0x22af190] free = 0, size = 80
+}
+
+
+Freeing block @ 0x22af190.
+Running traverse_blocks...
+{ global_base: 0x228d000
+	0: [0x228d000|0x228d020] free = 1, size = 520
+}
