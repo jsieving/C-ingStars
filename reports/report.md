@@ -3,9 +3,9 @@
 
 ## Project Description
 
-For our project we made our own implementation of malloc, free, and realloc. Our lower bound was to have a working basic implementation of malloc. For our stretch goal we would improve our implementation and/or implement more of the features of malloc and the other memory functions. For example, we could try optimizing with different fit algorithms and coalescing.
+For our project we made our own implementation of malloc, free, realloc and calloc. Our lower bound was to have a working basic implementation of malloc. For our stretch goal we would improve our implementation and/or implement more of the features of malloc and the other memory functions. For example, we could try optimizing with different fit algorithms and coalescing.
 
-We were about to incorporate what we learned splitting, coalescing, and alignment, accomplishing that aspect of our stretch goal. However, we didn't focus as much on making improvements in terms of optimizing performance.
+We successfully incorporated what we learned about splitting, coalescing, and alignment, accomplishing that aspect of our stretch goal. However, we didn't have time to make as many improvements to optimize performance as we would have liked. For example, the version of malloc that C regularly uses has all the free blocks linked together, so that occupied blocks don't have to be traversed during search. It also organizes free addresses into bins based on size. Both of these could have sped up our implementation, but it was too complex to implement and get working given the time we had.
 
 ## Learning Goals
 
@@ -13,7 +13,7 @@ We were about to incorporate what we learned splitting, coalescing, and alignmen
 * Reflection: I definitely accomplished my learning goals with this project . I was able to learn a lot about dynamic memory at a conceptual level from the research that we did and our implementation itself. The block data structure used in our implementation was a key feature, which helped my understanding of structs and how they are used.
 
 *Jane:* I want to gain a better understanding of how C handles memory under the hood and what is required to efficiently and effectively handle memory. I’m also just interested in having to write my own version of something that works at a pretty low level.
-* Reflection:
+* Reflection: I feel like I learned so much about how malloc works. Once we got the basic implementation done I felt like this was a pretty simple project, but when I got into different way of optimally using the space it really got interesting. I learned a lot and didn't get to implement all the things I learned about, so I feel like I could just keep working on this project. I feel like I created something pretty neat, even if it feels far from complete.
 
 
 ## Quick Malloc Review
@@ -47,7 +47,7 @@ In order to allocate and free space effectively and in a way that makes the best
 
 Allocating and freeing many small blocks could lead to long runs of blocks of adjacent free space which are each too small to be utilized when a larger allocation request is executed. This means that calls to `malloc` would traverse past all of them while searching for space, and `request_space` may be called excessively because a large enough block was not found.
 
-To fix this, we used coalescing to combine adjacent free blocks. This means that whenever a block is freed, it will check whether its neighbors are free and merge into a single block with all adjecent free space. If the next block is free, its space (including metadata space) is absorbed into the current block, and the current block's `next` attribute is set to the `next` block of the absorbed block. If that next block is not `NULL`, its `prev` attribute must also be set to point back to the current block.
+To fix this, we used coalescing to combine adjacent free blocks. This means that whenever a block is freed, it will check whether its neighbors are free and merge into a single block with all adjacent free space. If the next block is free, its space (including metadata space) is absorbed into the current block, and the current block's `next` attribute is set to the `next` block of the absorbed block. If that next block is not `NULL`, its `prev` attribute must also be set to point back to the current block.
 ```c
 // If the next block is free, absorb its space
 if (block_ptr->next && block_ptr->next->free == 1) {
@@ -124,7 +124,7 @@ If a null pointer is given, `my_realloc` acts like `malloc`.
 
 If the argument block's size is at least the requested size, `handle_extra_space` is called. This will split the block into 2 blocks if there is enough extra space to create a new block metadata structure. The second block will be free, and the first will be returned. If there is not enough extra space, the original block is returned.
 
-If there is a free block following the argument block, and the block occupies enough space to accomodate the needed size, the original block absorbs the next block's space, `next` and `prev` pointers are changed to skip over and forget the next block, and `handle_extra_space` is called in case there is leftover space.
+If there is a free block following the argument block, and the block occupies enough space to accommodate the needed size, the original block absorbs the next block's space, `next` and `prev` pointers are changed to skip over and forget the next block, and `handle_extra_space` is called in case there is leftover space.
 
 If the argument block is on the top of the heap, `sbrk` is called to try to expand its space.
 
@@ -157,4 +157,4 @@ Detailed description of the GNU C malloc library. It defines key terms and expla
 7. [Saven Patel's Thread-Safe Malloc](https://github.com/savanpatel/malloc)
 We referenced Savan Patel's implementation to see how threading is incorporated.
 6. [ptmalloc](http://www.malloc.de/en/)
-We also refereced `ptmalloc` since it can be used with multiple threads, but it was harder to navigate and understand all of the code in comparison to Resource 5.
+We also referenced `ptmalloc` since it can be used with multiple threads, but it was harder to navigate and understand all of the code in comparison to Resource 5.
